@@ -4,6 +4,10 @@ A single-player, turn-based grid roguelike. You are a hungry adventurer trapped 
 
 > Every step burns hunger. Collect the sauces. Escape The Fryer.
 
+<p align="center">
+  <img src="src/assets/title-nugget.png" alt="8-bit chicken nugget with pixel light rays" width="320" />
+</p>
+
 ## Features
 
 - 3 procedural floors: Drive-Thru Dungeon → Ketchup Catacombs → The Fryer
