@@ -1,5 +1,8 @@
 import Phaser from 'phaser';
 import { audio } from '../audio/AudioService';
+import { isAchievementUnlocked } from '../data/achievements';
+import { formatBossScore, getBestBossScore } from '../data/bossScore';
+import { isBossLevelAvailable } from '../data/bossUnlock';
 import { formatBestSteps, getBestSteps } from '../data/highScore';
 import { createNewRun } from '../data/runState';
 
@@ -112,15 +115,18 @@ export class TitleScene extends Phaser.Scene {
       )
       .setOrigin(0.5);
 
+    const bossAvailable = isBossLevelAvailable();
+    const hungerLabelY = bossAvailable ? 0.62 : 0.66;
+
     this.add
-      .text(width / 2, height * 0.66, 'How hungry are you?', {
+      .text(width / 2, height * hungerLabelY, 'How hungry are you?', {
         fontFamily: 'Courier New, monospace',
         fontSize: '18px',
         color: '#f5d080',
       })
       .setOrigin(0.5);
 
-    const optionY = [0.72, 0.78, 0.84];
+    const optionY = bossAvailable ? [0.68, 0.735, 0.79] : [0.72, 0.78, 0.84];
 
     HUNGER_CHOICES.forEach((choice, i) => {
       const t = this.add
@@ -144,6 +150,31 @@ export class TitleScene extends Phaser.Scene {
       });
     });
 
+    if (bossAvailable) {
+      const bestBoss = getBestBossScore();
+      const franchisee = isAchievementUnlocked('franchisee');
+      const bossLabel = this.add
+        .text(
+          width / 2,
+          height * 0.855,
+          `[ B ]  Boss of the Sauce${franchisee ? '  ★' : ''}${
+            bestBoss !== null ? `  ·  best ${formatBossScore(bestBoss)}` : ''
+          }`,
+          {
+            fontFamily: 'Courier New, monospace',
+            fontSize: '15px',
+            color: '#ff9f43',
+          },
+        )
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      bossLabel.on('pointerover', () => bossLabel.setColor('#ffffff'));
+      bossLabel.on('pointerout', () => bossLabel.setColor('#ff9f43'));
+      bossLabel.on('pointerdown', () => {
+        void this.startBoss();
+      });
+    }
+
     this.muteHint = this.add
       .text(width / 2, height * 0.91, this.muteLabel(), {
         fontFamily: 'Courier New, monospace',
@@ -153,11 +184,18 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height * 0.96, 'Press 1 / 2 / 3  ·  M mute  ·  ? help in-game', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: '12px',
-        color: '#8a7a68',
-      })
+      .text(
+        width / 2,
+        height * 0.96,
+        bossAvailable
+          ? 'Press 1 / 2 / 3  ·  B boss  ·  M mute  ·  ? help in-game'
+          : 'Press 1 / 2 / 3  ·  M mute  ·  ? help in-game',
+        {
+          fontFamily: 'Courier New, monospace',
+          fontSize: '12px',
+          color: '#8a7a68',
+        },
+      )
       .setOrigin(0.5);
 
     this.input.once('pointerdown', () => {
@@ -185,6 +223,11 @@ export class TitleScene extends Phaser.Scene {
         void this.startRun(HUNGER_CHOICES[2]!.hunger);
       });
       kb.on('keydown-M', () => this.toggleMute());
+      if (isBossLevelAvailable()) {
+        kb.on('keydown-B', () => {
+          void this.startBoss();
+        });
+      }
 
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
         kb.removeAllListeners();
@@ -210,5 +253,12 @@ export class TitleScene extends Phaser.Scene {
     audio.play('ui');
     const run = createNewRun({ startingHunger });
     this.scene.start('Dungeon', { run });
+  }
+
+  private async startBoss(): Promise<void> {
+    if (!isBossLevelAvailable()) return;
+    await audio.unlock();
+    audio.play('ui');
+    this.scene.start('BossCutscene');
   }
 }

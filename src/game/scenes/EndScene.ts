@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { audio } from '../audio/AudioService';
 import {
   ACHIEVEMENTS,
+  BONUS_ACHIEVEMENTS,
   displayName,
   getDeaths,
   getRunsPlayed,
@@ -10,6 +11,7 @@ import {
   recordRunPlayed,
   type AchievementDef,
 } from '../data/achievements';
+import { isBossIntroPending, maybeFlagBossIntroPending } from '../data/bossUnlock';
 import { sauceById } from '../data/content';
 import { formatBestSteps, getBestSteps } from '../data/highScore';
 import { createNewRun, nextRunStartingHunger } from '../data/runState';
@@ -26,6 +28,7 @@ export class EndScene extends Phaser.Scene {
   private left = false;
   private endedRun!: RunState;
   private tooltipText?: Phaser.GameObjects.Text;
+  private routeToBoss = false;
 
   constructor() {
     super('End');
@@ -51,6 +54,9 @@ export class EndScene extends Phaser.Scene {
     if (!victory) {
       recordDeath();
     }
+    // First time all 10 core achievements complete → Boss of the Sauce intro
+    maybeFlagBossIntroPending();
+    this.routeToBoss = isBossIntroPending();
     const gamesPlayed = getRunsPlayed();
     const deaths = getDeaths();
 
@@ -160,19 +166,23 @@ export class EndScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const nextHunger = nextRunStartingHunger(run);
-    const nextHint = victory
-      ? `Next: hardest hunger (${nextHunger}/100)`
-      : `Next: same hunger (${nextHunger}/100)`;
+    const nextHint = this.routeToBoss
+      ? 'Boss of the Sauce awaits…'
+      : victory
+        ? `Next: hardest hunger (${nextHunger}/100)`
+        : `Next: same hunger (${nextHunger}/100)`;
 
     this.add
       .text(
         width / 2,
         height * 0.92,
-        `${nextHint}  ·  [ ENTER / SPACE / ESC ] start now`,
+        this.routeToBoss
+          ? `${nextHint}  ·  [ ENTER / SPACE ] face King MacClowen`
+          : `${nextHint}  ·  [ ENTER / SPACE / ESC ] start now`,
         {
           fontFamily: 'Courier New, monospace',
           fontSize: '12px',
-          color: '#c9a227',
+          color: this.routeToBoss ? '#ff9f43' : '#c9a227',
         },
       )
       .setOrigin(0.5);
@@ -238,6 +248,26 @@ export class EndScene extends Phaser.Scene {
 
       x += ACH_ICON + ACH_GAP;
     }
+
+    // Secret 11th: Franchisee (bonus) — shown when boss path is open
+    const bonus = BONUS_ACHIEVEMENTS[0];
+    if (bonus) {
+      const unlocked = isAchievementUnlocked(bonus.id);
+      const bossPath =
+        unlocked ||
+        this.routeToBoss ||
+        ACHIEVEMENTS.every((a) => isAchievementUnlocked(a.id));
+      if (bossPath) {
+        const key = unlocked ? bonus.iconKey : 'ach_locked';
+        const img = this.add
+          .image(x + 8, y, key)
+          .setDisplaySize(ACH_ICON, ACH_ICON)
+          .setInteractive({ useHandCursor: true });
+        if (!unlocked) img.setTint(0x888888);
+        img.on('pointerover', () => this.showAchTooltip(bonus, unlocked, img.x, y));
+        img.on('pointerout', () => this.tooltipText?.setVisible(false));
+      }
+    }
   }
 
   private showAchTooltip(def: AchievementDef, unlocked: boolean, x: number, y: number): void {
@@ -276,6 +306,10 @@ export class EndScene extends Phaser.Scene {
     audio.stopPhaserKey('tune1');
     audio.stopPhaserKey('tune2');
     audio.play('ui');
+    if (this.routeToBoss) {
+      this.scene.start('BossCutscene');
+      return;
+    }
     const startingHunger = nextRunStartingHunger(this.endedRun);
     const run = createNewRun({ startingHunger });
     this.scene.start('Dungeon', { run });

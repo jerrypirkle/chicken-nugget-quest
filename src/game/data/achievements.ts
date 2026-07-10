@@ -13,7 +13,9 @@ export type AchievementId =
   | 'combo_meal'
   | 'skinny'
   | 'ketchup'
-  | 'hungry';
+  | 'hungry'
+  /** Secret 11th — beat Boss of the Sauce */
+  | 'franchisee';
 
 export interface AchievementDef {
   id: AchievementId;
@@ -93,6 +95,24 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   },
 ];
 
+/** Core career set that gates Boss of the Sauce (excludes Franchisee). */
+export const CORE_ACHIEVEMENT_IDS: AchievementId[] = ACHIEVEMENTS.map((a) => a.id);
+
+export const BONUS_ACHIEVEMENTS: AchievementDef[] = [
+  {
+    id: 'franchisee',
+    name: 'Franchisee',
+    description: 'Defeat King MacClowen in Boss of the Sauce.',
+    iconKey: 'ach_franchisee',
+    hiddenUntilUnlocked: true,
+  },
+];
+
+/** All achievements including secret bonus. */
+export function allAchievementDefs(): AchievementDef[] {
+  return [...ACHIEVEMENTS, ...BONUS_ACHIEVEMENTS];
+}
+
 const STORAGE_KEY = 'cnq-achievements';
 const RUNS_PLAYED_KEY = 'cnq-runs-played';
 const DEATHS_KEY = 'cnq-deaths';
@@ -132,13 +152,21 @@ export function getUnlockedAchievementIds(): AchievementId[] {
  * @returns true if this call newly unlocked it
  */
 export function unlockAchievement(id: AchievementId): boolean {
-  const def = ACHIEVEMENTS.find((a) => a.id === id);
+  const def =
+    ACHIEVEMENTS.find((a) => a.id === id) ??
+    BONUS_ACHIEVEMENTS.find((a) => a.id === id);
   if (!def || def.placeholder) return false;
   const store = readStore();
   if (store.has(id)) return false;
   store.add(id);
   writeStore(store);
   return true;
+}
+
+/** True when all 10 core achievements are unlocked. */
+export function areAllCoreAchievementsUnlocked(): boolean {
+  const store = readStore();
+  return CORE_ACHIEVEMENT_IDS.every((id) => store.has(id));
 }
 
 export function getRunsPlayed(): number {
@@ -189,7 +217,9 @@ export function recordDeath(): number {
 }
 
 export function getAchievement(id: AchievementId): AchievementDef {
-  const def = ACHIEVEMENTS.find((a) => a.id === id);
+  const def =
+    ACHIEVEMENTS.find((a) => a.id === id) ??
+    BONUS_ACHIEVEMENTS.find((a) => a.id === id);
   if (!def) throw new Error(`Unknown achievement: ${id}`);
   return def;
 }

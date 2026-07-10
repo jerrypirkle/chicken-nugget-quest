@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { MusicLoop } from './music';
 import { SFX_PRESETS, type SfxCue } from './sfxPresets';
+import { playVictoryFanfare } from './victoryFanfare';
 import { getAudioContext, resumeAudioContext, setAudioContext, zzfxPlay } from './zzfx';
 
 const MUTE_KEY = 'cnq-mute';
@@ -139,6 +140,21 @@ class AudioService {
     } else {
       this.music.stop();
     }
+  }
+
+  /**
+   * One-shot boss victory: FF-style fanfare × chiptune dubstep.
+   * @returns duration ms (for sequencing UI).
+   */
+  playVictoryMusic(): number {
+    if (this.muted || !this.userActivated) return 500;
+    this.music.stop();
+    void resumeAudioContext().then((ok) => {
+      if (!ok || this.muted) return;
+      playVictoryFanfare(0.12);
+    });
+    // Approximate fanfare length for any callers that sequence UI
+    return 3800;
   }
 
   /** Play a preloaded Phaser audio key (e.g. countdown tunes). */

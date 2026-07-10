@@ -11,6 +11,7 @@ import {
   unlockAchievement,
   type AchievementId,
 } from '../data/achievements';
+import { maybeFlagBossIntroPending } from '../data/bossUnlock';
 import { getBestSteps, tryRecordBestSteps } from '../data/highScore';
 import { hasAllSauces } from '../data/runState';
 import {
@@ -676,6 +677,7 @@ export class DungeonScene extends Phaser.Scene {
       this.run.stats.newlyUnlockedAchievements = [];
     }
     this.run.stats.newlyUnlockedAchievements.push(id);
+    maybeFlagBossIntroPending();
   }
 
   private occupancy(includePlayer: boolean): Set<string> {

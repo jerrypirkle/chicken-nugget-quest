@@ -3,6 +3,8 @@ import { BootScene } from './game/scenes/BootScene';
 import { TitleScene } from './game/scenes/TitleScene';
 import { DungeonScene } from './game/scenes/DungeonScene';
 import { EndScene } from './game/scenes/EndScene';
+import { BossCutsceneScene } from './game/scenes/BossCutsceneScene';
+import { BossShooterScene } from './game/scenes/BossShooterScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -14,7 +16,14 @@ const config: Phaser.Types.Core.GameConfig = {
     width: 960,
     height: 640,
   },
-  scene: [BootScene, TitleScene, DungeonScene, EndScene],
+  physics: {
+    default: 'arcade',
+    arcade: {
+      gravity: { x: 0, y: 0 },
+      debug: false,
+    },
+  },
+  scene: [BootScene, TitleScene, DungeonScene, EndScene, BossCutsceneScene, BossShooterScene],
   pixelArt: true,
   audio: {
     disableWebAudio: false,

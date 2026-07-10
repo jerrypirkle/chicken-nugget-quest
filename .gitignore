@@ -3,3 +3,8 @@ dist/
 .DS_Store
 *.local
 .vite/
+
+# Local AWS deploy (not committed)
+infra/
+scripts/
+docs/deployment.md
